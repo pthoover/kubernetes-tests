@@ -2,6 +2,7 @@
     "name": "cancel sleep job",
     "appId": "tapis.kubernetes.test.sleep",
     "appVersion": "1.0",
+    "archiveOnAppError": true,
     "parameterSet": {
         "schedulerOptions": [
             {

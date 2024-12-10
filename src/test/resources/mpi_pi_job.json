@@ -2,6 +2,7 @@
     "name": "test MPI pi job",
     "appId": "tapis.kubernetes.test.mpi.pi",
     "appVersion": "1.0",
+    "archiveOnAppError": true,
     "coresPerNode": 1,
     "memoryMB": 1000
 }
