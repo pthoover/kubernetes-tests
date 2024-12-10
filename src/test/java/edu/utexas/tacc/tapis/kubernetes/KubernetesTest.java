@@ -44,6 +44,58 @@ public class KubernetesTest
     /**
      *
      */
+    private static class HttpException extends Exception {
+
+        private final int _statusCode;
+
+
+        /**
+         *
+         * @param code
+         * @param message
+         */
+        private HttpException(int code, String message)
+        {
+            super(message);
+
+            _statusCode = code;
+        }
+
+
+        /**
+         *
+         * @param code
+         * @param source
+         * @return
+         * @throws IOException
+         */
+        public static HttpException createException(int code, Object source) throws IOException
+        {
+            String message;
+
+            if (source instanceof String)
+                message = (String) source;
+            else if (source instanceof InputStream)
+                message = new String(((InputStream) source).readAllBytes());
+            else
+                message = null;
+
+            return new HttpException(code, message);
+        }
+
+        /**
+         *
+         * @return
+         */
+        public int getStatusCode()
+        {
+            return _statusCode;
+        }
+    }
+
+    /**
+     *
+     */
     @FunctionalInterface
     private interface JobStatusHandler
     {
@@ -52,9 +104,11 @@ public class KubernetesTest
          * @param status
          * @param jobUuid
          * @return
-         * @throws Exception
+         * @throws HttpException
+         * @throws InterruptedException
+         * @throws IOException
          */
-        boolean handleStatus(String status, String jobUuid) throws Exception;
+        boolean handleStatus(String status, String jobUuid) throws HttpException, IOException, InterruptedException;
     }
 
     /**
@@ -63,7 +117,7 @@ public class KubernetesTest
     private class FinishWaiting implements JobStatusHandler
     {
         @Override
-        public boolean handleStatus(String status, String jobUuid) throws Exception
+        public boolean handleStatus(String status, String jobUuid) throws HttpException, IOException, InterruptedException
         {
             if (status.equals("FINISHED") || status.equals("FAILED") || status.equals("CANCELLED")) {
                 int count = getJobOutputCount(jobUuid);
@@ -87,7 +141,7 @@ public class KubernetesTest
     private class CancelJob implements JobStatusHandler
     {
         @Override
-        public boolean handleStatus(String status, String jobUuid) throws Exception
+        public boolean handleStatus(String status, String jobUuid) throws HttpException, IOException, InterruptedException
         {
             if (status.equals("RUNNING"))
                 cancelJob(jobUuid);
@@ -111,10 +165,12 @@ public class KubernetesTest
 
     /**
      *
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
     @BeforeSuite
-    public void setup() throws Exception
+    public void setup() throws HttpException, IOException, InterruptedException
     {
         _execSystemId = System.getenv("TAPIS_EXEC_SYSTEM_ID");
         _tapisUrlBase = System.getenv("TAPIS_URL_BASE");
@@ -131,10 +187,12 @@ public class KubernetesTest
 
     /**
      *
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
     @AfterSuite
-    public void teardown() throws Exception
+    public void teardown() throws HttpException, IOException, InterruptedException
     {
         for (String appId : _appIds)
             setAppDeleteState(appId, true);
@@ -142,10 +200,12 @@ public class KubernetesTest
 
     /**
      *
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
     @Test
-    public void createAppTest() throws Exception
+    public void createAppTest() throws HttpException, IOException, InterruptedException
     {
         runCreateAppTest("sleep_app.json");
         runCreateAppTest("mpi_pi_app.json");
@@ -153,10 +213,12 @@ public class KubernetesTest
 
     /**
      *
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
     @Test (dependsOnMethods="createAppTest")
-    public void submitJobTest() throws Exception
+    public void submitJobTest() throws HttpException, IOException, InterruptedException
     {
         runSubmitJobTest("sleep_job.json", "FINISHED", new FinishWaiting());
         runSubmitJobTest("mpi_pi_job.json", "FINISHED", new FinishWaiting());
@@ -164,21 +226,25 @@ public class KubernetesTest
 
     /**
      *
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
     @Test (dependsOnMethods="createAppTest")
-    public void cancelJobTest() throws Exception
+    public void cancelJobTest() throws HttpException, IOException, InterruptedException
     {
         runSubmitJobTest("sleep_cancel_job.json", "CANCELLED", new CancelJob(), new FinishWaiting());
-        runSubmitJobTest("mpi_pi_job.json", "CANCELLED",new CancelJob(),  new FinishWaiting());
+        runSubmitJobTest("mpi_pi_job.json", "CANCELLED", new CancelJob(), new FinishWaiting());
     }
 
     /**
      *
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
     @Test (dependsOnMethods="createAppTest")
-    public void failJobTest() throws Exception
+    public void failJobTest() throws HttpException, IOException, InterruptedException
     {
         runSubmitJobTest("sleep_fail_job.json", "FAILED", new FinishWaiting());
     }
@@ -207,9 +273,11 @@ public class KubernetesTest
      * @param username
      * @param password
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String getToken(String username, String password) throws Exception
+    private String getToken(String username, String password) throws HttpException, IOException, InterruptedException
     {
         Map<String, String> headers = new TreeMap<String, String>();
 
@@ -248,9 +316,11 @@ public class KubernetesTest
     /**
      *
      * @param name
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private void runCreateAppTest(String name) throws Exception
+    private void runCreateAppTest(String name) throws HttpException, IOException, InterruptedException
     {
         String config = readResource(name);
         JsonNode root = (new ObjectMapper()).readTree(config);
@@ -264,8 +334,8 @@ public class KubernetesTest
         try {
             status = createApp(config);
         }
-        catch (Exception err) {
-            if (!err.getMessage().equals("409"))
+        catch (HttpException err) {
+            if (err.getStatusCode() != 409)
                 throw err;
 
             status = setAppDeleteState(appId, false);
@@ -280,9 +350,11 @@ public class KubernetesTest
      *
      * @param config
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String createApp(String config) throws Exception
+    private String createApp(String config) throws HttpException, IOException, InterruptedException
     {
         String body = config.replaceAll("\\$\\{EXEC_SYSTEM_ID\\}", _execSystemId);
         Map<String, String> headers = new TreeMap<String, String>();
@@ -330,9 +402,11 @@ public class KubernetesTest
      * @param appId
      * @param appVersion
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String getApp(String appId, String appVersion) throws Exception
+    private String getApp(String appId, String appVersion) throws HttpException, IOException, InterruptedException
     {
         StringBuilder path = new StringBuilder();
 
@@ -353,9 +427,11 @@ public class KubernetesTest
      * @param appId
      * @param delete
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String setAppDeleteState(String appId, boolean delete) throws Exception
+    private String setAppDeleteState(String appId, boolean delete) throws HttpException, IOException, InterruptedException
     {
         String action = delete ? "delete" : "undelete";
         StringBuilder path = new StringBuilder();
@@ -393,9 +469,11 @@ public class KubernetesTest
      * @param name
      * @param expected
      * @param handlers
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private void runSubmitJobTest(String name, String expected, JobStatusHandler... handlers) throws Exception
+    private void runSubmitJobTest(String name, String expected, JobStatusHandler... handlers) throws HttpException, IOException, InterruptedException
     {
         String config = readResource(name);
         JsonNode root = (new ObjectMapper()).readTree(config);
@@ -416,9 +494,11 @@ public class KubernetesTest
      *
      * @param config
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String submitJob(String config) throws Exception
+    private String submitJob(String config) throws HttpException, IOException, InterruptedException
     {
         Map<String, String> headers = new TreeMap<String, String>();
 
@@ -454,9 +534,11 @@ public class KubernetesTest
      *
      * @param jobUuid
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String cancelJob(String jobUuid) throws Exception
+    private String cancelJob(String jobUuid) throws HttpException, IOException, InterruptedException
     {
         StringBuilder path = new StringBuilder();
 
@@ -492,9 +574,11 @@ public class KubernetesTest
      * @param jobUuid
      * @param handlers
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String waitForJobStatus(String jobUuid, JobStatusHandler... handlers) throws Exception
+    private String waitForJobStatus(String jobUuid, JobStatusHandler... handlers) throws HttpException, IOException, InterruptedException
     {
         StringBuilder pathBuilder = new StringBuilder();
 
@@ -549,9 +633,11 @@ public class KubernetesTest
      *
      * @param jobUuid
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private int getJobOutputCount(String jobUuid) throws Exception
+    private int getJobOutputCount(String jobUuid) throws HttpException, IOException, InterruptedException
     {
         StringBuilder path = new StringBuilder();
 
@@ -580,9 +666,11 @@ public class KubernetesTest
      *
      * @param jobUuid
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String downloadJobOutput(String jobUuid) throws Exception
+    private String downloadJobOutput(String jobUuid) throws HttpException, IOException, InterruptedException
     {
         StringBuilder path = new StringBuilder();
 
@@ -608,9 +696,11 @@ public class KubernetesTest
      * @param method
      * @param body
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private String getResponse(String path, Map<String, String> headers, HttpMethod method, String body) throws Exception
+    private String getResponse(String path, Map<String, String> headers, HttpMethod method, String body) throws HttpException, IOException, InterruptedException
     {
         return getHttpResponse(path, headers, method, body, HttpResponse.BodyHandlers.ofString());
     }
@@ -622,9 +712,11 @@ public class KubernetesTest
      * @param method
      * @param body
      * @param filename
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private void downloadFile(String path, Map<String, String> headers, HttpMethod method, String body, String filename) throws Exception
+    private void downloadFile(String path, Map<String, String> headers, HttpMethod method, String body, String filename) throws HttpException, IOException, InterruptedException
     {
         InputStream inStream = getHttpResponse(path, headers, method, body, HttpResponse.BodyHandlers.ofInputStream());
 
@@ -646,9 +738,11 @@ public class KubernetesTest
      * @param body
      * @param handler
      * @return
-     * @throws Exception
+     * @throws HttpException
+     * @throws InterruptedException
+     * @throws IOException
      */
-    private <T> T getHttpResponse(String path, Map<String, String> headers, HttpMethod method, String body, HttpResponse.BodyHandler<T> handler) throws Exception
+    private <T> T getHttpResponse(String path, Map<String, String> headers, HttpMethod method, String body, HttpResponse.BodyHandler<T> handler) throws HttpException, IOException, InterruptedException
     {
         String url = _tapisUrlBase + "/v3/" + path;
         HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url));
@@ -679,7 +773,7 @@ public class KubernetesTest
         HttpResponse<T> response = client.send(request, handler);
 
         if (response.statusCode() >= 300)
-            throw new Exception(String.valueOf(response.statusCode()));
+            throw HttpException.createException(response.statusCode(), response.body());
 
         return response.body();
     }
