@@ -69,7 +69,7 @@ public class KubernetesTest
          * @return
          * @throws IOException
          */
-        public static HttpException createException(int code, Object source) throws IOException
+        public static HttpException createInstance(int code, Object source) throws IOException
         {
             String message;
 
@@ -773,7 +773,7 @@ public class KubernetesTest
         HttpResponse<T> response = client.send(request, handler);
 
         if (response.statusCode() >= 300)
-            throw HttpException.createException(response.statusCode(), response.body());
+            throw HttpException.createInstance(response.statusCode(), response.body());
 
         return response.body();
     }
