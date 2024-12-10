@@ -170,6 +170,7 @@ public class KubernetesTest
     public void cancelJobTest() throws Exception
     {
         runSubmitJobTest("sleep_cancel_job.json", "CANCELLED", new CancelJob(), new FinishWaiting());
+        runSubmitJobTest("mpi_pi_job.json", "CANCELLED",new CancelJob(),  new FinishWaiting());
     }
 
     /**
