@@ -1,0 +1,5 @@
+{
+    "name": "fail sleep job",
+    "appId": "tapis.kubernetes.test.sleep",
+    "appVersion": "1.0"
+}

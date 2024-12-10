@@ -1,0 +1,28 @@
+{
+    "id": "tapis.kubernetes.test.sleep",
+    "version": "1.0",
+    "description": "Sleep application",
+    "runtime": "KUBERNETES",
+    "containerImage": "ubuntu:latest",
+    "jobType": "BATCH",
+    "jobAttributes": {
+        "description": "launches sleep",
+        "execSystemId": "${EXEC_SYSTEM_ID}",
+        "parameterSet": {
+            "schedulerOptions": [
+                {
+                    "name": "container-command",
+                    "description": "command to execute",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.template.spec.containers.command=[\"sleep\"]]"
+                },
+                {
+                    "name": "container-args",
+                    "description": "command arguments",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.template.spec.containers.args=[]"
+                }
+            ]
+        }
+    }
+}

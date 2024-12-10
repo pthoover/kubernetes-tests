@@ -1,0 +1,15 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd" >
+
+<suite name="Kubernetes Tests" verbose="1" parallel="none">
+  <groups>
+    <run>
+      <exclude name="broken"/>
+      <exclude name="notReady"/>
+    </run>
+  </groups>
+  <test name="kubernetes">
+    <packages>
+      <package name="edu.utexas.tacc.tapis.kubernetes.*" />
+    </packages>
+  </test>
+</suite>

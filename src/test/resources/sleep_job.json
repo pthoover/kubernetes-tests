@@ -1,0 +1,12 @@
+{
+    "name": "test sleep job",
+    "appId": "tapis.kubernetes.test.sleep",
+    "appVersion": "1.0",
+    "parameterSet": {
+        "schedulerOptions": [
+            {
+                "arg": "spec.template.spec.containers.args+=\"5\""
+            }
+        ]
+    }
+}

@@ -1,0 +1,95 @@
+{
+    "id": "tapis.kubernetes.test.mpi.pi",
+    "version": "1.0",
+    "description": "MPI pi application",
+    "runtime": "KUBERNETES",
+    "containerImage": "mpioperator/mpi-pi:openmpi",
+    "jobType": "BATCH",
+    "jobAttributes": {
+        "description": "calculates pi",
+        "execSystemId": "${EXEC_SYSTEM_ID}",
+        "isMpi": true,
+        "parameterSet": {
+            "schedulerOptions": [
+                {
+                    "name": "worker-slots",
+                    "description": "number of slots per worker",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.slotsPerWorker=1"
+                },
+                {
+                    "name": "ssh-auth-mount",
+                    "description": "mount path for ssh auth data",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.sshAuthMountPath=/home/mpiuser/.ssh"
+                },
+                {
+                    "name": "backoff-limit",
+                    "description": "backoff limit",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.runPolicy.backoffLimit=6"
+                },
+                {
+                    "name": "launcher-restart-policy",
+                    "description": "restart policy",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Launcher.restartPolicy=OnFailure"
+                },
+                {
+                    "name": "launcher-security-context",
+                    "description": "security context for the launcher",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Launcher.template.spec.containers.securityContext={runAsUser: 1000}"
+                },
+                {
+                    "name": "launcher-command",
+                    "description": "command to execute in the launcher",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Launcher.template.spec.containers.command=[\"mpirun\"]"
+                },
+                {
+                    "name": "launcher-args",
+                    "description": "arguments for the launcher execution command",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Launcher.template.spec.containers.args=[\"-n\", \"2\", \"/home/mpiuser/pi\"]"
+                  },
+                        {
+                    "name": "launcher-cores",
+                    "description": "number of cores for the launcher",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Launcher.template.spec.containers.resources.limits.cpu=1"
+                },
+                {
+                    "name": "launcher-memory",
+                    "description": "amount of memory for the launcher",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Launcher.template.spec.containers.resources.limits.memory=1Gi"
+                },
+                {
+                    "name": "worker-security-context",
+                    "description": "security context for the worker",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Worker.template.spec.containers.securityContext={runAsUser: 1000}"
+                },
+                {
+                    "name": "worker-replicas",
+                    "description": "number of workers",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Worker.replicas=2"
+                },
+                {
+                    "name": "worker-command",
+                    "description": "command to execute in the worker",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Worker.template.spec.containers.command=[\"/usr/sbin/sshd\"]"
+                },
+                {
+                    "name": "worker-args",
+                    "description": "arguments for the worker execution command",
+                    "inputMode": "REQUIRED",
+                    "arg": "spec.mpiReplicaSpecs.Worker.template.spec.containers.args=[\"-De\", \"-f\", \"/home/mpiuser/.sshd_config\"]"
+                }
+            ]
+        }
+    }
+}
