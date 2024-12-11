@@ -509,14 +509,17 @@ public class KubernetesTest
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(response);
         String status = root.at("/status").asText();
-        String jobUuid = root.at("/result/uuid").asText();
+        String jobUuid;
         String jobId;
 
-        if (status.equals("success"))
+        if (status.equals("success")) {
+            jobUuid = root.at("/result/uuid").asText();
             jobId = jobUuid;
+        }
         else {
             root = mapper.readTree(config);
             jobId = root.at("/name").asText();
+            jobUuid = null;
         }
 
         String filename = jobId + "_submit.json";
